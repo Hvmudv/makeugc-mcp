@@ -1,0 +1,6 @@
+node_modules/
+.makeugc-session.json
+.profile/
+.env
+.claude-flow/
+*.png

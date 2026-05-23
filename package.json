@@ -1,0 +1,21 @@
+{
+  "name": "makeugc-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for MakeUGC.ai — automate AI UGC video creation from Claude Code",
+  "main": "src/index.js",
+  "bin": {
+    "makeugc-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node src/setup.js"
+  },
+  "keywords": ["mcp", "makeugc", "ai-ugc", "ugc", "claude", "automation"],
+  "author": "hvmudvlab",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.60.0"
+  }
+}
