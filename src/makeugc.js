@@ -40,8 +40,24 @@ async function switchMode(page, modeName) {
 async function listActors({ gender, style, age } = {}) {
   const page = await getPage();
 
+  // Must be on a project page for Add Actors to be available
+  if (!page.url().includes('/projects/') && !page.url().match(/makeugc\.ai\/[^/]+\/[^/]+/)) {
+    await page.goto('https://app.makeugc.ai/projects', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+    // Click first project
+    const projectUrl = await page.evaluate(() => {
+      const link = document.querySelector('a[href*="/projects/"], tr a, [class*="project"] a');
+      return link?.href || null;
+    });
+    if (projectUrl) {
+      await page.goto(projectUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(2000);
+    }
+  }
+
+  // Click Add Actors — it's a div not a button
   await page.evaluate(() => {
-    const all = document.querySelectorAll('div');
+    const all = document.querySelectorAll('div, button, span');
     for (const el of all) {
       if (el.innerText?.trim() === 'Add Actors') { el.click(); return; }
     }
@@ -71,23 +87,19 @@ async function listActors({ gender, style, age } = {}) {
   }
 
   const actors = await page.evaluate(() => {
-    const results = [];
-    const nameEls = document.querySelectorAll('[class*="actor"] [class*="name"], img[alt]');
-    nameEls.forEach(el => {
-      const name = el.alt || el.innerText?.trim();
-      if (name && name.length > 1 && name.length < 40) {
-        results.push({ name, id: name.toLowerCase().replace(/\s+/g, '-') });
+    const names = new Set();
+    document.querySelectorAll('*').forEach(el => {
+      if (el.children.length === 0 && el.textContent?.trim() === 'HD') {
+        const grandparent = el.parentElement?.parentElement;
+        if (grandparent) {
+          const texts = [...grandparent.querySelectorAll('p, span, div')]
+            .map(e => e.textContent?.trim())
+            .filter(t => t && t.length > 1 && t.length < 40 && t !== 'HD' && t !== 'New' && !t.includes('HD'));
+          if (texts[0]) names.add(texts[0]);
+        }
       }
     });
-    if (results.length === 0) {
-      document.querySelectorAll('*').forEach(el => {
-        if (el.children.length === 0 && el.innerText?.trim() === 'HD') {
-          const nameEl = el.previousElementSibling || el.parentElement?.querySelector('p, span');
-          if (nameEl) results.push({ name: nameEl.innerText?.trim(), id: nameEl.innerText?.trim().toLowerCase() });
-        }
-      });
-    }
-    return results;
+    return [...names].map(name => ({ name, id: name.toLowerCase().replace(/\s+/g, '-') }));
   });
 
   await page.keyboard.press('Escape');
