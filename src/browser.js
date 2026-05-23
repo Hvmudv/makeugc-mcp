@@ -14,15 +14,24 @@ let _browser = null;
 let _page = null;
 
 async function getBrowser() {
+  // Reset stale browser reference
+  if (_browser) {
+    try {
+      const contexts = _browser.contexts ? _browser.contexts() : [_browser];
+      if (!contexts || contexts.length === 0) throw new Error('no contexts');
+    } catch {
+      _browser = null;
+      _page = null;
+    }
+  }
+
   if (_browser) return _browser;
 
   const wsEndpoint = process.env.CHROME_WS_ENDPOINT;
 
   if (wsEndpoint) {
-    // Connect to user's running Chrome (CDP mode — already logged in)
     _browser = await chromium.connectOverCDP(wsEndpoint);
   } else {
-    // Launch fresh browser with persistent context
     const userDataDir = process.env.MAKEUGC_PROFILE || path.join(__dirname, '..', '.profile');
     _browser = await chromium.launchPersistentContext(userDataDir, {
       headless: process.env.HEADLESS === '1',
@@ -33,7 +42,9 @@ async function getBrowser() {
 }
 
 async function getPage() {
-  if (_page && !_page.isClosed()) return _page;
+  if (_page && !_page.isClosed()) {
+    try { await _page.evaluate(() => true); return _page; } catch { _page = null; }
+  }
 
   const browser = await getBrowser();
 
